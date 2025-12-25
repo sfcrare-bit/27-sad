@@ -129,6 +129,11 @@
             color: #1565c0;
             border: 2px solid #1565c0;
         }
+        .status-police {
+            background-color: rgba(63, 81, 181, 0.2);
+            color: #283593;
+            border: 2px solid #283593;
+        }
         .admin-panel {
             background-color: #2c1810;
             color: #fff8eb;
@@ -216,6 +221,7 @@
         .unit-icon {
             font-size: 1.8rem;
         }
+        /* Контейнер для колонок 382-го ОБМП с фиксированной высотой и прокруткой */
         .columns-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
@@ -227,6 +233,40 @@
             border-radius: 10px;
             padding: 20px;
             border: 2px solid #d4a762;
+            max-height: 500px; /* Фиксированная высота */
+            overflow-y: auto; /* Вертикальная прокрутка */
+            overflow-x: hidden; /* Горизонтальная прокрутка скрыта */
+        }
+        .column-section::-webkit-scrollbar {
+            width: 8px;
+        }
+        .column-section::-webkit-scrollbar-track {
+            background: #f5e9d3;
+            border-radius: 4px;
+        }
+        .column-section::-webkit-scrollbar-thumb {
+            background: #b08d57;
+            border-radius: 4px;
+        }
+        .column-section::-webkit-scrollbar-thumb:hover {
+            background: #8a6d46;
+        }
+        /* Стиль для заголовков внутри колонок */
+        .column-title {
+            color: #6b5234;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 5px solid #8a6d46;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            background: rgba(255, 248, 235, 0.9);
+            padding: 10px;
+            margin: -10px -10px 15px -10px;
+            z-index: 1;
         }
         @media (max-width: 1100px) {
             .columns-container {
@@ -242,6 +282,7 @@
             button { width: 100%; }
             .stats-bar { flex-direction: column; gap: 10px; align-items: center; }
             .columns-container { grid-template-columns: 1fr; }
+            .column-section { max-height: 400px; }
         }
     </style>
 </head>
@@ -277,12 +318,12 @@
             
             <div class="columns-container">
                 <div class="column-section">
-                    <div class="unit-title" style="font-size: 1.4rem; border-left-color: #6b5234;">📋 Штаб и пехотные подразделения</div>
+                    <div class="column-title">📋 Штаб и пехотные подразделения</div>
                     <div id="bmp382List"></div>
                 </div>
                 
                 <div class="column-section">
-                    <div class="unit-title" style="font-size: 1.4rem; border-left-color: #6b5234;">⚡ ТАНКОВАЯ РОТА</div>
+                    <div class="column-title">⚡ ТАНКОВАЯ РОТА</div>
                     <div id="tankList"></div>
                 </div>
             </div>
@@ -291,6 +332,12 @@
         <div class="unit-section">
             <div class="unit-title"><span class="unit-icon">🎯</span> 94-я БАТАРЕЯ БЕРЕГОВОЙ АРТИЛЛЕРИИ (ББА)</div>
             <div id="bba94List"></div>
+        </div>
+
+        <!-- Новый раздел: Военная Полиция -->
+        <div class="unit-section">
+            <div class="unit-title"><span class="unit-icon">👮</span> ВОЕННАЯ ПОЛИЦИЯ 27-й САД</div>
+            <div id="policeList"></div>
         </div>
 
         <!-- Новый раздел: ССО ЦСН "Сенеж" -->
@@ -338,6 +385,7 @@
                             <option value="bmp382">382-й Отдельный батальон Морской Пехоты</option>
                             <option value="tank">Танковая рота 382-й ОБМП</option>
                             <option value="bba94">94-я Батарея Береговой Артиллерии</option>
+                            <option value="police">Военная Полиция 27-й САД</option>
                             <option value="senezh">ССО ЦСН "Сенеж"</option>
                             <option value="vagner">ЧВК "Вагнер"</option>
                         </select>
@@ -348,8 +396,6 @@
                             <option value="active">✅ Боевая готовность</option>
                             <option value="reserve">⏸ В резерве</option>
                             <option value="leave">✈️ В отпуске</option>
-                            <option value="mission">🎯 На задании</option>
-                            <option value="training">🏋️ На тренировке</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -407,6 +453,7 @@
             'bmp382': 'bmp382List',
             'bba94': 'bba94List',
             'tank': 'tankList',
+            'police': 'policeList',
             'senezh': 'senezhList',
             'vagner': 'vagnerList'
         };
@@ -450,21 +497,18 @@
             const statusMap = {
                 'active': { text: '✅ Боевая готовность', class: 'status-active' },
                 'reserve': { text: '⏸ В резерве', class: 'status-reserve' },
-                'leave': { text: '✈️ В отпуске', class: 'status-reserve' },
-                'mission': { text: '🎯 На задании', class: 'status-active' },
-                'training': { text: '🏋️ На тренировке', class: 'status-reserve' }
+                'leave': { text: '✈️ В отпуске', class: 'status-reserve' }
             };
             
-            // Специальные статусы для Сенежа и Вагнера
             let status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
             
+            // Специальные цвета статусов для разных подразделений
             if (fighter.unit === 'senezh') {
                 status.class = 'status-senezh';
-                if (fighter.status === 'mission') status.text = '🔱 Спецоперация';
-            }
-            if (fighter.unit === 'vagner') {
+            } else if (fighter.unit === 'vagner') {
                 status.class = 'status-vagner';
-                if (fighter.status === 'active') status.text = '⚔️ Боевой состав';
+            } else if (fighter.unit === 'police') {
+                status.class = 'status-police';
             }
             
             const card = document.createElement('div');
@@ -549,10 +593,7 @@
         window.updateStats = function() {
             const cards = document.querySelectorAll('.person-card');
             const active = Array.from(cards).filter(card => 
-                card.querySelector('.status').textContent.includes('✅') || 
-                card.querySelector('.status').textContent.includes('🎯') ||
-                card.querySelector('.status').textContent.includes('⚔️') ||
-                card.querySelector('.status').textContent.includes('🔱')
+                card.querySelector('.status').textContent.includes('✅')
             ).length;
             
             document.getElementById('totalCount').textContent = cards.length;
