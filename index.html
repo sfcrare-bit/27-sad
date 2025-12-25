@@ -7,6 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        /* Фоновое изображение с размытием */
         body::before {
             content: '';
             position: fixed;
@@ -14,29 +15,23 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('https://i.imgur.com/R0tZkYv.jpeg');
+            background-image: linear-gradient(rgba(107, 82, 52, 0.7), rgba(44, 24, 16, 0.8)), 
+                            url('https://i.imgur.com/R0tZkYv.jpeg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            background-attachment: fixed;
-            filter: blur(10px);
+            filter: blur(8px) brightness(0.8);
             z-index: -2;
         }
         
-        body::after {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            z-index: -1;
-        }
-        
+        /* Альтернативный вариант фона если изображение не загрузится */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #d4a762 0%, #b08d57 25%, #8a6d46 50%, #6b5234 100%);
+            background: linear-gradient(135deg, 
+                rgba(212, 167, 98, 0.9) 0%, 
+                rgba(176, 141, 87, 0.9) 25%, 
+                rgba(138, 109, 70, 0.9) 50%, 
+                rgba(107, 82, 52, 0.9) 100%);
             color: #2c1810;
             min-height: 100vh;
             padding: 20px;
@@ -46,15 +41,17 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background-color: rgba(255, 248, 235, 0.92);
+            background-color: rgba(255, 248, 235, 0.95);
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(107, 82, 52, 0.4);
+            box-shadow: 0 10px 30px rgba(107, 82, 52, 0.5);
             border: 3px solid #8a6d46;
             overflow: hidden;
             position: relative;
             z-index: 1;
+            backdrop-filter: blur(5px);
         }
         
+        /* Остальные стили остаются без изменений */
         header {
             background: linear-gradient(to right, #6b5234, #8a6d46, #b08d57);
             color: #fff8eb;
@@ -81,7 +78,7 @@
         .stats-bar {
             display: flex;
             justify-content: space-around;
-            background-color: #2c1810;
+            background-color: rgba(44, 24, 16, 0.95);
             color: #d4a762;
             padding: 12px;
             font-size: 0.9rem;
@@ -167,7 +164,7 @@
             border: 2px solid #283593;
         }
         .admin-panel {
-            background-color: #2c1810;
+            background-color: rgba(44, 24, 16, 0.95);
             color: #fff8eb;
             padding: 25px;
             margin-top: 30px;
@@ -260,7 +257,7 @@
             margin-top: 20px;
         }
         .column-section {
-            background: rgba(255, 248, 235, 0.7);
+            background: rgba(255, 248, 235, 0.85);
             border-radius: 10px;
             padding: 20px;
             border: 2px solid #d4a762;
@@ -293,7 +290,7 @@
             gap: 10px;
             position: sticky;
             top: 0;
-            background: rgba(255, 248, 235, 0.9);
+            background: rgba(255, 248, 235, 0.95);
             padding: 10px;
             margin: -10px -10px 15px -10px;
             z-index: 1;
@@ -314,9 +311,27 @@
             .columns-container { grid-template-columns: 1fr; }
             .column-section { max-height: 400px; }
         }
+        
+        /* Стили для отображения ошибки загрузки изображения */
+        .image-error {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff4444;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
+    <div class="image-error" id="imageError">
+        Фоновое изображение не загружено
+    </div>
+    
     <div class="container">
         <header>
             <h1>27-я СМЕШАННАЯ АВИАЦИОННАЯ ДИВИЗИЯ</h1>
@@ -458,6 +473,22 @@
     <script>
     const supabaseUrl = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
+    
+    // Проверка загрузки фонового изображения
+    window.addEventListener('load', function() {
+        const img = new Image();
+        img.src = 'https://i.imgur.com/R0tZkYv.jpeg';
+        img.onload = function() {
+            console.log('Фоновое изображение загружено');
+        };
+        img.onerror = function() {
+            console.log('Ошибка загрузки фонового изображения');
+            document.getElementById('imageError').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('imageError').style.display = 'none';
+            }, 5000);
+        };
+    });
     
     (function() {
         const script = document.createElement('script');
