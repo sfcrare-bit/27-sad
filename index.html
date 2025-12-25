@@ -326,193 +326,175 @@
     </div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script>
-        const SUPABASE_URL = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script>
+    // ПРЯМОЕ ПОДКЛЮЧЕНИЕ К SUPABASE
+    const supabaseUrl = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
+    
+    // ПРАВИЛЬНОЕ СОЗДАНИЕ КЛИЕНТА
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    
+    console.log('Supabase инициализирован:', supabase);
+    
+    // ФУНКЦИЯ ПРОВЕРКИ ПАРОЛЯ (ДОЛЖНА БЫТЬ ПЕРВОЙ)
+    function checkPassword() {
+        console.log('Функция checkPassword вызвана');
+        const password = document.getElementById('adminPassword').value;
+        console.log('Введён пароль:', password);
         
-        const unitContainers = {
-            'command': 'commandList',
-            'sap37': 'sap37List',
-            'bmp382': 'bmp382List',
-            'bba94': 'bba94List',
-            'tank': 'tankList'
-        };
-        
-        async function loadFighters() {
+        if (password === '27SAD2016') {
+            document.getElementById('adminContent').style.display = 'block';
+            document.getElementById('adminPassword').style.display = 'none';
+            const btn = document.querySelector('button[onclick="checkPassword()"]');
+            if (btn) btn.style.display = 'none';
+            alert('Доступ к админке разрешен!');
+            console.log('Админка открыта');
+        } else {
+            alert('Неверный пароль!');
+        }
+    }
+    
+    // ОСТАЛЬНЫЕ ФУНКЦИИ
+    const unitContainers = {
+        'command': 'commandList',
+        'sap37': 'sap37List',
+        'bmp382': 'bmp382List',
+        'bba94': 'bba94List',
+        'tank': 'tankList'
+    };
+    
+    async function loadFighters() {
+        try {
             const { data, error } = await supabase
                 .from('fighters')
                 .select('*')
                 .order('created_at', { ascending: true });
             
-            if (error) {
-                console.error('Ошибка загрузки:', error);
-                return;
-            }
+            if (error) throw error;
             
-            Object.values(unitContainers).forEach(containerId => {
-                document.getElementById(containerId).innerHTML = '';
+            Object.values(unitContainers).forEach(id => {
+                document.getElementById(id).innerHTML = '';
             });
             
-            data.forEach(fighter => {
-                addFighterToDOM(fighter);
-            });
-            
+            data.forEach(fighter => addFighterToDOM(fighter));
             updateStats();
+        } catch (error) {
+            console.error('Ошибка загрузки:', error);
         }
+    }
+    
+    function addFighterToDOM(fighter) {
+        const statusMap = {
+            'active': { text: '✅ Боевая готовность', class: 'status-active' },
+            'reserve': { text: '⏸ В резерве', class: 'status-reserve' },
+            'leave': { text: '✈️ В отпуске', class: 'status-reserve' }
+        };
         
-        function addFighterToDOM(fighter) {
-            const statusText = {
-                'active': '✅ Боевая готовность',
-                'reserve': '⏸ В резерве',
-                'leave': '✈️ В отпуске'
-            }[fighter.status] || '❓ Неизвестно';
-            
-            const statusClass = {
-                'active': 'status-active',
-                'reserve': 'status-reserve',
-                'leave': 'status-reserve'
-            }[fighter.status] || 'status-reserve';
-            
-            const personCard = document.createElement('div');
-            personCard.className = 'person-card';
-            personCard.dataset.id = fighter.id;
-            personCard.innerHTML = `
-                <div class="person-info">
-                    <h3>${fighter.name}</h3>
-                    <p>${fighter.position} | ${fighter.rank}</p>
-                    ${fighter.details ? `<p>${fighter.details}</p>` : ''}
-                </div>
-                <div class="status ${statusClass}">${statusText}</div>
-            `;
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '❌';
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.style.padding = '5px 10px';
-            deleteBtn.style.fontSize = '0.8rem';
-            deleteBtn.style.marginLeft = '10px';
-            deleteBtn.onclick = async function() {
-                if (confirm(`Удалить ${fighter.name} из состава?`)) {
-                    const { error } = await supabase
-                        .from('fighters')
-                        .delete()
-                        .eq('id', fighter.id);
-                    
-                    if (!error) {
-                        personCard.remove();
-                        updateStats();
-                    } else {
-                        alert('Ошибка удаления: ' + error.message);
-                    }
-                }
-            };
-            personCard.querySelector('.person-info').appendChild(deleteBtn);
-            
-            document.getElementById(unitContainers[fighter.unit]).appendChild(personCard);
-        }
+        const status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
         
-        async function addPerson() {
-            const name = document.getElementById('personName').value.trim();
-            const position = document.getElementById('personPosition').value.trim();
-            const rank = document.getElementById('personRank').value.trim();
-            const unit = document.getElementById('personUnit').value;
-            const status = document.getElementById('personStatus').value;
-            const details = document.getElementById('personDetails').value.trim();
-            
-            if (!name || !position || !rank) {
-                alert('Заполните обязательные поля: ФИО, Должность, Звание');
-                return;
-            }
-            
-            const { data, error } = await supabase
-                .from('fighters')
-                .insert([
-                    {
-                        name: name,
-                        position: position,
-                        rank: rank,
-                        unit: unit,
-                        status: status,
-                        details: details
-                    }
-                ])
-                .select();
-            
-            if (error) {
-                alert('Ошибка добавления: ' + error.message);
-                return;
-            }
-            
-            if (data && data[0]) {
-                addFighterToDOM(data[0]);
-                updateStats();
-                
-                document.getElementById('personName').value = '';
-                document.getElementById('personPosition').value = '';
-                document.getElementById('personRank').value = '';
-                document.getElementById('personDetails').value = '';
-                
-                alert(`Боец ${name} добавлен в базу данных!`);
-            }
-        }
+        const card = document.createElement('div');
+        card.className = 'person-card';
+        card.dataset.id = fighter.id;
+        card.innerHTML = `
+            <div class="person-info">
+                <h3>${fighter.name}</h3>
+                <p>${fighter.position} | ${fighter.rank}</p>
+                ${fighter.details ? `<p>${fighter.details}</p>` : ''}
+            </div>
+            <div class="status ${status.class}">${status.text}</div>
+        `;
         
-        function updateStats() {
-            const cards = document.querySelectorAll('.person-card');
-            let active = 0, reserve = 0;
-            
-            cards.forEach(card => {
-                const status = card.querySelector('.status').textContent;
-                if (status.includes('✅ Боевая готовность')) {
-                    active++;
-                } else {
-                    reserve++;
-                }
-            });
-            
-            document.getElementById('totalCount').textContent = cards.length;
-            document.getElementById('activeCount').textContent = active;
-            document.getElementById('reserveCount').textContent = reserve;
-        }
-        
-        async function clearAll() {
-            if (!confirm('ВНИМАНИЕ! Удалить ВСЕХ бойцов (кроме командования)?')) return;
-            
-            const { error } = await supabase
-                .from('fighters')
-                .delete()
-                .neq('unit', 'command');
-            
-            if (error) {
-                alert('Ошибка очистки: ' + error.message);
-                return;
-            }
-            
-            document.querySelectorAll('.person-card').forEach(card => {
-                if (card.dataset.id !== '1') {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '❌';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.style.cssText = 'padding:5px 10px;font-size:0.8rem;margin-left:10px';
+        deleteBtn.onclick = async () => {
+            if (confirm(`Удалить ${fighter.name}?`)) {
+                const { error } = await supabase.from('fighters').delete().eq('id', fighter.id);
+                if (!error) {
                     card.remove();
+                    updateStats();
                 }
-            });
-            
-            updateStats();
-            alert('Все бойцы (кроме командования) удалены из базы.');
-        }
-        
-        function checkPassword() {
-            const password = document.getElementById('adminPassword').value;
-            if (password === '27SAD2016') {
-                document.getElementById('adminContent').style.display = 'block';
-                document.getElementById('adminPassword').style.display = 'none';
-                document.querySelector('button[onclick="checkPassword()"]').style.display = 'none';
-                alert('Доступ к админке разрешен');
-            } else {
-                alert('Неверный пароль!');
             }
+        };
+        
+        card.querySelector('.person-info').appendChild(deleteBtn);
+        document.getElementById(unitContainers[fighter.unit]).appendChild(card);
+    }
+    
+    async function addPerson() {
+        const name = document.getElementById('personName').value.trim();
+        const position = document.getElementById('personPosition').value.trim();
+        const rank = document.getElementById('personRank').value.trim();
+        
+        if (!name || !position || !rank) {
+            alert('Заполните ФИО, Должность и Звание');
+            return;
         }
         
-        document.addEventListener('DOMContentLoaded', function() {
-            loadFighters();
+        const newFighter = {
+            name,
+            position,
+            rank,
+            unit: document.getElementById('personUnit').value,
+            status: document.getElementById('personStatus').value,
+            details: document.getElementById('personDetails').value.trim()
+        };
+        
+        const { data, error } = await supabase
+            .from('fighters')
+            .insert([newFighter])
+            .select();
+        
+        if (error) {
+            alert('Ошибка: ' + error.message);
+            return;
+        }
+        
+        if (data[0]) {
+            addFighterToDOM(data[0]);
+            updateStats();
+            ['personName', 'personPosition', 'personRank', 'personDetails'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            alert(`Боец ${name} добавлен!`);
+        }
+    }
+    
+    function updateStats() {
+        const cards = document.querySelectorAll('.person-card');
+        const active = Array.from(cards).filter(card => 
+            card.querySelector('.status').textContent.includes('✅')
+        ).length;
+        
+        document.getElementById('totalCount').textContent = cards.length;
+        document.getElementById('activeCount').textContent = active;
+        document.getElementById('reserveCount').textContent = cards.length - active;
+    }
+    
+    async function clearAll() {
+        if (!confirm('Удалить всех бойцов (кроме командования)?')) return;
+        
+        const { error } = await supabase
+            .from('fighters')
+            .delete()
+            .neq('unit', 'command');
+        
+        if (error) {
+            alert('Ошибка: ' + error.message);
+            return;
+        }
+        
+        document.querySelectorAll('.person-card').forEach(card => {
+            if (card.dataset.id !== '1') card.remove();
         });
-    </script>
+        
+        updateStats();
+        alert('Очищено!');
+    }
+    
+    // ЗАГРУЗКА ПРИ СТАРТЕ
+    document.addEventListener('DOMContentLoaded', loadFighters);
+</script>
 </body>
 </html>
