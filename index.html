@@ -15,7 +15,7 @@
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.1"><path d="M0,50 Q25,25 50,50 T100,50" stroke="%236b5234" fill="none"/></svg>');
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background-color: rgba(255, 248, 235, 0.92);
             border-radius: 15px;
@@ -55,6 +55,7 @@
             font-size: 0.9rem;
             font-weight: bold;
             border-bottom: 2px solid #8a6d46;
+            flex-wrap: wrap;
         }
         .unit-section {
             padding: 25px;
@@ -117,6 +118,16 @@
             background-color: rgba(255, 193, 7, 0.2);
             color: #ff8f00;
             border: 2px solid #ff8f00;
+        }
+        .status-vagner {
+            background-color: rgba(121, 85, 72, 0.2);
+            color: #5d4037;
+            border: 2px solid #5d4037;
+        }
+        .status-senezh {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #1565c0;
+            border: 2px solid #1565c0;
         }
         .admin-panel {
             background-color: #2c1810;
@@ -192,6 +203,7 @@
             justify-content: center;
             gap: 20px;
             margin-top: 25px;
+            flex-wrap: wrap;
         }
         footer {
             text-align: center;
@@ -204,6 +216,23 @@
         .unit-icon {
             font-size: 1.8rem;
         }
+        .columns-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .column-section {
+            background: rgba(255, 248, 235, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #d4a762;
+        }
+        @media (max-width: 1100px) {
+            .columns-container {
+                grid-template-columns: 1fr;
+            }
+        }
         @media (max-width: 768px) {
             header h1 { font-size: 2rem; }
             .person-card { flex-direction: column; align-items: flex-start; gap: 15px; }
@@ -211,6 +240,8 @@
             .form-row { flex-direction: column; }
             .controls { flex-direction: column; }
             button { width: 100%; }
+            .stats-bar { flex-direction: column; gap: 10px; align-items: center; }
+            .columns-container { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -240,9 +271,21 @@
             <div id="sap37List"></div>
         </div>
 
+        <!-- Объединённый раздел для 382-го ОБМП и Танковой роты -->
         <div class="unit-section">
-            <div class="unit-title"><span class="unit-icon">🪖</span> 382-й ОТДЕЛЬНЫЙ БАТАЛЬОН МОРСКОЙ ПЕХОТЫ (ОБМП)</div>
-            <div id="bmp382List"></div>
+            <div class="unit-title"><span class="unit-icon">🪖</span> 382-й ОТДЕЛЬНЫЙ БАТАЛЬОН МОРСКОЙ ПЕХОТЫ</div>
+            
+            <div class="columns-container">
+                <div class="column-section">
+                    <div class="unit-title" style="font-size: 1.4rem; border-left-color: #6b5234;">📋 Штаб и пехотные подразделения</div>
+                    <div id="bmp382List"></div>
+                </div>
+                
+                <div class="column-section">
+                    <div class="unit-title" style="font-size: 1.4rem; border-left-color: #6b5234;">⚡ ТАНКОВАЯ РОТА</div>
+                    <div id="tankList"></div>
+                </div>
+            </div>
         </div>
 
         <div class="unit-section">
@@ -250,9 +293,16 @@
             <div id="bba94List"></div>
         </div>
 
+        <!-- Новый раздел: ССО ЦСН "Сенеж" -->
         <div class="unit-section">
-            <div class="unit-title"><span class="unit-icon">⚡</span> ТАНКОВАЯ РОТА</div>
-            <div id="tankList"></div>
+            <div class="unit-title"><span class="unit-icon">🔱</span> СИЛЫ СПЕЦИАЛЬНЫХ ОПЕРАЦИЙ ЦСН "СЕНЕЖ"</div>
+            <div id="senezhList"></div>
+        </div>
+
+        <!-- Новый раздел: ЧВК "Вагнер" -->
+        <div class="unit-section">
+            <div class="unit-title"><span class="unit-icon">⚔️</span> ЧВК "ВАГНЕР" (ПРИКРЕПЛЁННОЕ ПОДРАЗДЕЛЕНИЕ)</div>
+            <div id="vagnerList"></div>
         </div>
 
         <div class="admin-panel" id="adminPanel">
@@ -286,8 +336,10 @@
                             <option value="command">Командование 27-й САД</option>
                             <option value="sap37">37-й Смешанный Авиационный Полк</option>
                             <option value="bmp382">382-й Отдельный батальон Морской Пехоты</option>
+                            <option value="tank">Танковая рота 382-й ОБМП</option>
                             <option value="bba94">94-я Батарея Береговой Артиллерии</option>
-                            <option value="tank">Танковая рота</option>
+                            <option value="senezh">ССО ЦСН "Сенеж"</option>
+                            <option value="vagner">ЧВК "Вагнер"</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -296,6 +348,8 @@
                             <option value="active">✅ Боевая готовность</option>
                             <option value="reserve">⏸ В резерве</option>
                             <option value="leave">✈️ В отпуске</option>
+                            <option value="mission">🎯 На задании</option>
+                            <option value="training">🏋️ На тренировке</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -326,7 +380,6 @@
     </div>
 
     <script>
-
     const supabaseUrl = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
     
@@ -353,7 +406,9 @@
             'sap37': 'sap37List',
             'bmp382': 'bmp382List',
             'bba94': 'bba94List',
-            'tank': 'tankList'
+            'tank': 'tankList',
+            'senezh': 'senezhList',
+            'vagner': 'vagnerList'
         };
         
         window.checkPassword = function() {
@@ -375,6 +430,7 @@
                 const { data, error } = await supabase
                     .from('fighters')
                     .select('*')
+                    .order('unit', { ascending: true })
                     .order('created_at', { ascending: true });
                 
                 if (error) throw error;
@@ -394,10 +450,22 @@
             const statusMap = {
                 'active': { text: '✅ Боевая готовность', class: 'status-active' },
                 'reserve': { text: '⏸ В резерве', class: 'status-reserve' },
-                'leave': { text: '✈️ В отпуске', class: 'status-reserve' }
+                'leave': { text: '✈️ В отпуске', class: 'status-reserve' },
+                'mission': { text: '🎯 На задании', class: 'status-active' },
+                'training': { text: '🏋️ На тренировке', class: 'status-reserve' }
             };
             
-            const status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
+            // Специальные статусы для Сенежа и Вагнера
+            let status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
+            
+            if (fighter.unit === 'senezh') {
+                status.class = 'status-senezh';
+                if (fighter.status === 'mission') status.text = '🔱 Спецоперация';
+            }
+            if (fighter.unit === 'vagner') {
+                status.class = 'status-vagner';
+                if (fighter.status === 'active') status.text = '⚔️ Боевой состав';
+            }
             
             const card = document.createElement('div');
             card.className = 'person-card';
@@ -434,7 +502,9 @@
                 card.querySelector('.person-info').appendChild(deleteBtn);
             }
             
-            document.getElementById(unitContainers[fighter.unit]).appendChild(card);
+            if (unitContainers[fighter.unit]) {
+                document.getElementById(unitContainers[fighter.unit]).appendChild(card);
+            }
         }
         
         window.addPerson = async function() {
@@ -479,7 +549,10 @@
         window.updateStats = function() {
             const cards = document.querySelectorAll('.person-card');
             const active = Array.from(cards).filter(card => 
-                card.querySelector('.status').textContent.includes('✅')
+                card.querySelector('.status').textContent.includes('✅') || 
+                card.querySelector('.status').textContent.includes('🎯') ||
+                card.querySelector('.status').textContent.includes('⚔️') ||
+                card.querySelector('.status').textContent.includes('🔱')
             ).length;
             
             document.getElementById('totalCount').textContent = cards.length;
@@ -510,6 +583,6 @@
         
         loadFighters();
     }
-</script>
+    </script>
 </body>
 </html>
