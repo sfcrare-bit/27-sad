@@ -391,43 +391,54 @@
             }
             
             function addFighterToDOM(fighter) {
-                const statusMap = {
-                    'active': { text: '✅ Боевая готовность', class: 'status-active' },
-                    'reserve': { text: '⏸ В резерве', class: 'status-reserve' },
-                    'leave': { text: '✈️ В отпуске', class: 'status-reserve' }
-                };
-                
-                const status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
-                
-                const card = document.createElement('div');
-                card.className = 'person-card';
-                card.dataset.id = fighter.id;
-                card.innerHTML = `
-                    <div class="person-info">
-                        <h3>${fighter.name}</h3>
-                        <p>${fighter.position} | ${fighter.rank}</p>
-                        ${fighter.details ? `<p>${fighter.details}</p>` : ''}
-                    </div>
-                    <div class="status ${status.class}">${status.text}</div>
-                `;
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = '❌';
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.style.cssText = 'padding:5px 10px;font-size:0.8rem;margin-left:10px';
-                deleteBtn.onclick = async () => {
-                    if (confirm(`Удалить ${fighter.name}?`)) {
-                        const { error } = await supabase.from('fighters').delete().eq('id', fighter.id);
-                        if (!error) {
-                            card.remove();
-                            updateStats();
-                        }
-                    }
-                };
-                
-                card.querySelector('.person-info').appendChild(deleteBtn);
-                document.getElementById(unitContainers[fighter.unit]).appendChild(card);
+    const statusMap = {
+        'active': { text: '✅ Боевая готовность', class: 'status-active' },
+        'reserve': { text: '⏸ В резерве', class: 'status-reserve' },
+        'leave': { text: '✈️ В отпуске', class: 'status-reserve' }
+    };
+    
+    const status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
+    
+    const card = document.createElement('div');
+    card.className = 'person-card';
+    card.dataset.id = fighter.id;
+    card.innerHTML = `
+        <div class="person-info">
+            <h3>${fighter.name}</h3>
+            <p>${fighter.position} | ${fighter.rank}</p>
+            ${fighter.details ? `<p>${fighter.details}</p>` : ''}
+        </div>
+        <div class="status ${status.class}">${status.text}</div>
+    `;
+    
+    // Проверяем, открыта ли админ-панель
+    const isAdminPanelVisible = document.getElementById('adminContent').style.display === 'block';
+    
+    // Создаем кнопку удаления только если пользователь вошел в админку
+    if (isAdminPanelVisible) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '❌';
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.style.cssText = 'padding:5px 10px;font-size:0.8rem;margin-left:10px';
+        deleteBtn.onclick = async () => {
+            // Запрашиваем подтверждение удаления
+            if (confirm(`Удалить ${fighter.name}?`)) {
+                const { error } = await supabase.from('fighters').delete().eq('id', fighter.id);
+                if (!error) {
+                    card.remove();
+                    updateStats();
+                    alert('Боец успешно удалён!');
+                } else {
+                    alert('Ошибка удаления: ' + error.message);
+                }
             }
+        };
+        
+        card.querySelector('.person-info').appendChild(deleteBtn);
+    }
+    
+    document.getElementById(unitContainers[fighter.unit]).appendChild(card);
+}
             
             // ДОБАВЛЕНИЕ БОЙЦА
             window.addPerson = async function() {
