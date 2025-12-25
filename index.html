@@ -7,7 +7,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* Ваше изображение как размытый фон - убрал градиент, уменьшил размытие */
         body::before {
             content: '';
             position: fixed;
@@ -24,7 +23,6 @@
             z-index: -2;
         }
         
-        /* Убавил затемнение для лучшей видимости картинки */
         body::after {
             content: '';
             position: fixed;
@@ -56,7 +54,6 @@
             z-index: 1;
         }
         
-        /* Остальные стили остаются без изменений */
         header {
             background: linear-gradient(to right, #6b5234, #8a6d46, #b08d57);
             color: #fff8eb;
@@ -320,7 +317,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Весь HTML код сайта остается без изменений -->
         <header>
             <h1>27-я СМЕШАННАЯ АВИАЦИОННАЯ ДИВИЗИЯ</h1>
             <h2>Сирийский Контингент | Зона ответственности: Аллепо</h2>
@@ -345,7 +341,6 @@
             <div id="sap37List"></div>
         </div>
 
-        <!-- Объединённый раздел для 382-го ОБМП и Танковой роты -->
         <div class="unit-section">
             <div class="unit-title"><span class="unit-icon">🪖</span> 382-й ОТДЕЛЬНЫЙ БАТАЛЬОН МОРСКОЙ ПЕХОТЫ (ОБМП)</div>
             
@@ -367,19 +362,16 @@
             <div id="bba94List"></div>
         </div>
 
-        <!-- Новый раздел: Военная Полиция -->
         <div class="unit-section">
             <div class="unit-title"><span class="unit-icon">👮</span> ВОЕННАЯ ПОЛИЦИЯ (ВП) 27-й САД</div>
             <div id="policeList"></div>
         </div>
 
-        <!-- Новый раздел: ССО ЦСН "Сенеж" -->
         <div class="unit-section">
             <div class="unit-title"><span class="unit-icon">🔱</span> СИЛЫ СПЕЦИАЛЬНЫХ ОПЕРАЦИЙ ЦСН "СЕНЕЖ" (ССО ЦСН "Сенеж")</div>
             <div id="senezhList"></div>
         </div>
 
-        <!-- Новый раздел: ЧВК "Вагнер" -->
         <div class="unit-section">
             <div class="unit-title"><span class="unit-icon">⚔️</span> ЧВК "ВАГНЕР"</div>
             <div id="vagnerList"></div>
@@ -458,7 +450,6 @@
         </footer>
     </div>
 
-    <!-- Весь JavaScript код остается без изменений -->
     <script>
     const supabaseUrl = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
@@ -536,7 +527,6 @@
             
             let status = statusMap[fighter.status] || { text: '❓ Неизвестно', class: 'status-reserve' };
             
-            // Специальные цвета статусов для разных подразделений
             if (fighter.unit === 'senezh') {
                 status.class = 'status-senezh';
             } else if (fighter.unit === 'vagner') {
