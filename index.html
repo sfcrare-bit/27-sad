@@ -326,11 +326,10 @@
     </div>
 
     <script>
-    // ПОДКЛЮЧЕНИЕ К SUPABASE
+
     const supabaseUrl = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
     
-    // ЗАГРУЗКА БИБЛИОТЕКИ И СОЗДАНИЕ КЛИЕНТА
     (function() {
         const script = document.createElement('script');
         script.src = 'https://unpkg.com/@supabase/supabase-js@2';
@@ -357,7 +356,6 @@
             'tank': 'tankList'
         };
         
-        // ФУНКЦИЯ ПРОВЕРКИ ПАРОЛЯ
         window.checkPassword = function() {
             const password = document.getElementById('adminPassword').value;
             if (password === '27SAD2016') {
@@ -366,7 +364,6 @@
                 document.querySelector('button[onclick="checkPassword()"]').style.display = 'none';
                 alert('Доступ к админке разрешен!');
                 
-                // ПЕРЕЗАГРУЖАЕМ БОЙЦОВ, ЧТОБЫ ПОКАЗАТЬ КНОПКИ УДАЛЕНИЯ
                 loadFighters();
             } else {
                 alert('Неверный пароль!');
@@ -414,10 +411,8 @@
                 <div class="status ${status.class}">${status.text}</div>
             `;
             
-            // ПРОВЕРЯЕМ, ОТКРЫТА ЛИ АДМИН-ПАНЕЛЬ
             const isAdminPanelVisible = document.getElementById('adminContent').style.display === 'block';
             
-            // СОЗДАЕМ КНОПКУ УДАЛЕНИЯ ТОЛЬКО ЕСЛИ ПОЛЬЗОВАТЕЛЬ ВОШЕЛ В АДМИНКУ
             if (isAdminPanelVisible) {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = '❌';
@@ -442,7 +437,6 @@
             document.getElementById(unitContainers[fighter.unit]).appendChild(card);
         }
         
-        // ДОБАВЛЕНИЕ БОЙЦА
         window.addPerson = async function() {
             const name = document.getElementById('personName').value.trim();
             const position = document.getElementById('personPosition').value.trim();
@@ -482,7 +476,6 @@
             }
         };
         
-        // ОБНОВЛЕНИЕ СТАТИСТИКИ
         window.updateStats = function() {
             const cards = document.querySelectorAll('.person-card');
             const active = Array.from(cards).filter(card => 
@@ -494,7 +487,6 @@
             document.getElementById('reserveCount').textContent = cards.length - active;
         };
         
-        // ОЧИСТКА ВСЕХ
         window.clearAll = async function() {
             if (!confirm('Удалить всех бойцов (кроме командования)?')) return;
             
@@ -516,7 +508,6 @@
             alert('Очищено!');
         };
         
-        // ЗАГРУЗКА ПРИ СТАРТЕ
         loadFighters();
     }
 </script>
