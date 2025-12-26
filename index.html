@@ -172,6 +172,7 @@
                 <div class="controls">
                     <button onclick="addFighter()">➕ ДОБАВИТЬ БОЙЦА</button>
                     <button onclick="updateStats()">📊 ОБНОВИТЬ СТАТИСТИКУ</button>
+                    <button onclick="clearAll()" class="delete-btn">🗑️ ОЧИСТИТЬ ВСЕХ</button>
                 </div>
                 
                 <div style="text-align: center; margin-top: 20px; color: #b08d57; font-size: 0.9rem;">
@@ -186,378 +187,241 @@
         </footer>
     </div>
 
-            let supabaseClient = null;
-const SUPABASE_URL = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
+    <script>
+        let supabaseClient = null;
+        const SUPABASE_URL = 'https://kyxnkteujlntyhhcsnnz.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5eG5rdGV1amxudHloaGNzbm56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjEwNTMsImV4cCI6MjA4MjE5NzA1M30.Fvwr4xFPkHd63GwZ9KRFVgSPlx6HLoF_hpfR6AwGCL4';
-
-async function sha256Hash(input) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(input);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function xorEncrypt(text, key = 'SAD27_2025_SECRET') {
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-    }
-    return btoa(result);
-}
-
-function xorDecrypt(encrypted, key = 'SAD27_2025_SECRET') {
-    const text = atob(encrypted);
-    let result = '';
-    for (let i = 0; i < text.length; i++) {
-        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-    }
-    return result;
-}
-
-let passwordCache = null;
-let loginAttempts = 0;
-const MAX_ATTEMPTS = 3;
-const LOCKOUT_TIME = 180000;
-
-async function generateSecurePassword() {
-    if (passwordCache) return passwordCache;
-    
-    const now = new Date();
-    const day = now.getDate();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-    
-    const base = "27SAD";
-    const seed = (day * month * year) % 999;
-    const checksum = ((day + month + year) * 27) % 1000;
-    const dateStr = `${day}${month}${year}`;
-    
-    const hashInput = base + seed + checksum + dateStr;
-    const hash = await sha256Hash(hashInput);
-    
-    passwordCache = `${base}${seed.toString().padStart(3,'0')}${checksum.toString().padStart(3,'0')}${hash.substring(0,4).toUpperCase()}`;
-    
-    setTimeout(() => { passwordCache = null; }, 3600000);
-    
-    return passwordCache;
-}
-
-async function checkAdminPassword() {
-    if (loginAttempts >= MAX_ATTEMPTS) {
-        alert('🚫 Доступ заблокирован. Попробуйте позже.');
-        return;
-    }
-    
-    const input = document.getElementById('adminPassword').value.trim();
-    if (!input) {
-        alert('Введите пароль');
-        return;
-    }
-    
-    const hashedInput = await sha256Hash(input);
-    const correctPassword = await generateSecurePassword();
-    const hashedCorrect = await sha256Hash(correctPassword);
-    
-    const loginTime = new Date().toISOString();
-    const encryptedLog = xorEncrypt(`ATTEMPT:${loginTime}:${input.substring(0,1)}***`);
-    
-    if (hashedInput === hashedCorrect) {
-        const sessionToken = await sha256Hash(correctPassword + Date.now());
-        localStorage.setItem('adminSession', xorEncrypt(sessionToken));
-        localStorage.setItem('sessionExpiry', Date.now() + 3600000);
         
-        document.getElementById('adminContent').style.display = 'block';
-        document.getElementById('adminPassword').value = '';
-        document.getElementById('adminPassword').style.display = 'none';
-        document.getElementById('loginButton').style.display = 'none';
-        
-        loginAttempts = 0;
-        localStorage.setItem('loginAttempts', '0');
-        
-        const successLog = xorEncrypt(`SUCCESS:${loginTime}:${sessionToken.substring(0,8)}`);
-        console.log('[SECURE_LOG]', successLog);
-        
-        await loadFighters();
-        alert('✅ Доступ разрешен. Сессия активна 1 час.');
-    } else {
-        loginAttempts++;
-        localStorage.setItem('loginAttempts', loginAttempts.toString());
-        
-        const failLog = xorEncrypt(`FAILED:${loginTime}:${loginAttempts}`);
-        console.log('[SECURE_LOG]', failLog);
-        
-        alert(`❌ Неверный пароль! Попытка ${loginAttempts}/${MAX_ATTEMPTS}`);
-        
-        if (loginAttempts >= MAX_ATTEMPTS) {
-            alert('🚫 Превышено количество попыток. Доступ заблокирован на 3 минуты.');
-            setTimeout(() => {
-                loginAttempts = 0;
-                localStorage.setItem('loginAttempts', '0');
-            }, LOCKOUT_TIME);
-        }
-    }
-}
-
-function checkSession() {
-    const session = localStorage.getItem('adminSession');
-    const expiry = localStorage.getItem('sessionExpiry');
-    
-    if (!session || !expiry) return false;
-    if (Date.now() > parseInt(expiry)) {
-        localStorage.removeItem('adminSession');
-        localStorage.removeItem('sessionExpiry');
-        return false;
-    }
-    
-    try {
-        xorDecrypt(session);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function initSupabase() {
-    const storedAttempts = localStorage.getItem('loginAttempts');
-    loginAttempts = parseInt(storedAttempts || '0');
-    
-    if (checkSession()) {
-        document.getElementById('adminContent').style.display = 'block';
-        document.getElementById('adminPassword').style.display = 'none';
-        document.getElementById('loginButton').style.display = 'none';
-    }
-    
-    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    await loadFighters();
-}
-
-async function loadFighters() {
-    if (!supabaseClient) return;
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('fighters')
-            .select('*')
-            .order('unit', { ascending: true })
-            .order('created_at', { ascending: true });
-        
-        if (error) {
-            const errorLog = xorEncrypt(`DB_ERROR:${new Date().toISOString()}:${error.message.substring(0,20)}`);
-            console.log('[SECURE_LOG]', errorLog);
-            return;
+        async function initSupabase() {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            await loadFighters();
         }
         
-        const containers = {
-            command: 'commandList',
-            sap37: 'sap37List',
-            bmp382: 'bmp382List',
-            tank: 'tankList',
-            bba94: 'bba94List',
-            police: 'policeList',
-            senezh: 'senezhList',
-            vagner: 'vagnerList'
-        };
+        function generateDynamicPassword() {
+            const now = new Date();
+            const day = now.getDate();
+            const month = now.getMonth() + 1;
+            const year = now.getFullYear();
+            const base = "27SAD";
+            const seed = (day * month * year) % 999;
+            const checksum = ((day + month + year) * 27) % 1000;
+            const dateStr = `${day}${month}${year}`;
+            const hash = Array.from(dateStr).reduce((acc, char) => 
+                ((acc << 5) - acc) + char.charCodeAt(0), 0);
+            return `${base}${seed.toString().padStart(3,'0')}${checksum.toString().padStart(3,'0')}${Math.abs(hash).toString(16).substr(0,4).toUpperCase()}`;
+        }
         
-        Object.values(containers).forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = '';
+        async function checkAdminPassword() {
+            const input = document.getElementById('adminPassword').value.trim();
+            const correctPassword = generateDynamicPassword();
+            
+            if (input === correctPassword) {
+                document.getElementById('adminContent').style.display = 'block';
+                document.getElementById('adminPassword').style.display = 'none';
+                document.querySelector('button[onclick="checkAdminPassword()"]').style.display = 'none';
+                await loadFighters();
+                alert('Доступ разрешен');
+            } else {
+                alert('Неверный пароль!');
+            }
+        }
+        
+        async function loadFighters() {
+            if (!supabaseClient) return;
+            
+            const { data, error } = await supabaseClient
+                .from('fighters')
+                .select('*')
+                .order('unit', { ascending: true })
+                .order('created_at', { ascending: true });
+            
+            if (error) {
+                console.error('Ошибка загрузки:', error);
+                return;
+            }
+            
+            const containers = {
+                command: 'commandList',
+                sap37: 'sap37List',
+                bmp382: 'bmp382List',
+                tank: 'tankList',
+                bba94: 'bba94List',
+                police: 'policeList',
+                senezh: 'senezhList',
+                vagner: 'vagnerList'
+            };
+            
+            Object.values(containers).forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
+            
+            if (data && data.length > 0) {
+                data.forEach(fighter => {
+                    addFighterToDOM(fighter);
+                });
+                updateStats();
+            }
+        }
+        
+        function addFighterToDOM(fighter) {
+            const statusMap = {
+                active: {text: '✅ Боевая готовность', class: 'status-active'},
+                reserve: {text: '⏸ В резерве', class: 'status-reserve'},
+                leave: {text: '✈️ В отпуске', class: 'status-reserve'}
+            };
+            
+            const status = statusMap[fighter.status] || statusMap.reserve;
+            let statusClass = status.class;
+            
+            if (fighter.unit === 'senezh') statusClass = 'status-senezh';
+            else if (fighter.unit === 'vagner') statusClass = 'status-vagner';
+            else if (fighter.unit === 'police') statusClass = 'status-police';
+            
+            const card = document.createElement('div');
+            card.className = 'person-card';
+            card.dataset.id = fighter.id;
+            
+            card.innerHTML = `
+                <div class="person-info">
+                    <h3>${fighter.name}</h3>
+                    <p>${fighter.position} | ${fighter.rank}</p>
+                    ${fighter.details ? `<p>${fighter.details}</p>` : ''}
+                </div>
+                <div class="status ${statusClass}">${status.text}</div>
+            `;
+            
+            if (document.getElementById('adminContent').style.display === 'block') {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.style.cssText = 'padding:5px 10px;font-size:0.8rem;margin-left:10px;';
+                deleteBtn.onclick = () => deleteFighter(fighter.id);
+                card.querySelector('.person-info').appendChild(deleteBtn);
+            }
+            
+            const containerId = {
+                command: 'commandList',
+                sap37: 'sap37List',
+                bmp382: 'bmp382List',
+                tank: 'tankList',
+                bba94: 'bba94List',
+                police: 'policeList',
+                senezh: 'senezhList',
+                vagner: 'vagnerList'
+            }[fighter.unit];
+            
+            if (containerId) {
+                document.getElementById(containerId).appendChild(card);
+            }
+        }
+        
+        async function addFighter() {
+            if (!supabaseClient) return;
+            
+            const name = document.getElementById('personName').value.trim();
+            const position = document.getElementById('personPosition').value.trim();
+            const rank = document.getElementById('personRank').value.trim();
+            
+            if (!name || !position || !rank) {
+                alert('Заполните ФИО, Должность и Звание');
+                return;
+            }
+            
+            const fighter = {
+                name: name,
+                position: position,
+                rank: rank,
+                unit: document.getElementById('personUnit').value,
+                status: document.getElementById('personStatus').value,
+                details: document.getElementById('personDetails').value.trim()
+            };
+            
+            const { data, error } = await supabaseClient
+                .from('fighters')
+                .insert([fighter])
+                .select();
+            
+            if (error) {
+                alert('Ошибка: ' + error.message);
+                return;
+            }
+            
+            if (data && data[0]) {
+                addFighterToDOM(data[0]);
+                updateStats();
+                
+                ['personName', 'personPosition', 'personRank', 'personDetails'].forEach(id => {
+                    document.getElementById(id).value = '';
+                });
+                
+                alert(`Боец ${name} добавлен`);
+            }
+        }
+        
+        async function deleteFighter(id) {
+            if (!supabaseClient || !confirm('Удалить бойца?')) return;
+            
+            const { error } = await supabaseClient
+                .from('fighters')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                alert('Ошибка удаления: ' + error.message);
+                return;
+            }
+            
+            document.querySelector(`.person-card[data-id="${id}"]`)?.remove();
+            updateStats();
+            alert('Боец удален');
+        }
+        
+        function updateStats() {
+            const cards = document.querySelectorAll('.person-card');
+            const activeCards = Array.from(cards).filter(card => 
+                card.querySelector('.status').textContent.includes('✅')
+            );
+            
+            document.getElementById('totalCount').textContent = cards.length;
+            document.getElementById('activeCount').textContent = activeCards.length;
+            document.getElementById('reserveCount').textContent = cards.length - activeCards.length;
+        }
+        
+        async function clearAll() {
+            if (!supabaseClient || !confirm('Удалить всех бойцов кроме командования?')) return;
+            
+            const { error } = await supabaseClient
+                .from('fighters')
+                .delete()
+                .neq('unit', 'command');
+            
+            if (error) {
+                alert('Ошибка: ' + error.message);
+                return;
+            }
+            
+            await loadFighters();
+            alert('Система очищена');
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('copy', (e) => {
+                e.preventDefault();
+                alert('Копирование запрещено!');
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.keyCode === 123 || 
+                    (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
+                    (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
+                    (e.ctrlKey && e.keyCode === 85)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            initSupabase();
         });
-        
-        if (data && data.length > 0) {
-            data.forEach(fighter => {
-                addFighterToDOM(fighter);
-            });
-            updateStats();
-        }
-    } catch (error) {
-        const errorLog = xorEncrypt(`LOAD_ERROR:${new Date().toISOString()}:${error.message.substring(0,20)}`);
-        console.log('[SECURE_LOG]', errorLog);
-    }
-}
-
-function addFighterToDOM(fighter) {
-    const statusMap = {
-        active: {text: '✅ Боевая готовность', class: 'status-active'},
-        reserve: {text: '⏸ В резерве', class: 'status-reserve'},
-        leave: {text: '✈️ В отпуске', class: 'status-reserve'}
-    };
-    
-    const status = statusMap[fighter.status] || statusMap.reserve;
-    let statusClass = status.class;
-    
-    if (fighter.unit === 'senezh') statusClass = 'status-senezh';
-    else if (fighter.unit === 'vagner') statusClass = 'status-vagner';
-    else if (fighter.unit === 'police') statusClass = 'status-police';
-    
-    const card = document.createElement('div');
-    card.className = 'person-card';
-    card.dataset.id = fighter.id;
-    
-    card.innerHTML = `
-        <div class="person-info">
-            <h3>${fighter.name}</h3>
-            <p>${fighter.position} | ${fighter.rank}</p>
-            ${fighter.details ? `<p>${fighter.details}</p>` : ''}
-        </div>
-        <div class="status ${statusClass}">${status.text}</div>
-    `;
-    
-    if (checkSession()) {
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '🗑️';
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.style.cssText = 'padding:5px 10px;font-size:0.8rem;margin-left:10px;';
-        deleteBtn.onclick = () => deleteFighter(fighter.id);
-        card.querySelector('.person-info').appendChild(deleteBtn);
-    }
-    
-    const containerId = {
-        command: 'commandList',
-        sap37: 'sap37List',
-        bmp382: 'bmp382List',
-        tank: 'tankList',
-        bba94: 'bba94List',
-        police: 'policeList',
-        senezh: 'senezhList',
-        vagner: 'vagnerList'
-    }[fighter.unit];
-    
-    if (containerId && document.getElementById(containerId)) {
-        document.getElementById(containerId).appendChild(card);
-    }
-}
-
-async function addFighter() {
-    if (!supabaseClient || !checkSession()) {
-        alert('❌ Требуется авторизация администратора');
-        return;
-    }
-    
-    const name = document.getElementById('personName')?.value.trim();
-    const position = document.getElementById('personPosition')?.value.trim();
-    const rank = document.getElementById('personRank')?.value.trim();
-    
-    if (!name || !position || !rank) {
-        alert('Заполните ФИО, Должность и Звание');
-        return;
-    }
-    
-    const fighter = {
-        name: name,
-        position: position,
-        rank: rank,
-        unit: document.getElementById('personUnit')?.value || 'command',
-        status: document.getElementById('personStatus')?.value || 'active',
-        details: document.getElementById('personDetails')?.value.trim() || ''
-    };
-    
-    const logTime = new Date().toISOString();
-    const logData = xorEncrypt(`ADD_FIGHTER:${logTime}:${name.substring(0,10)}`);
-    console.log('[SECURE_LOG]', logData);
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('fighters')
-            .insert([fighter])
-            .select();
-        
-        if (error) {
-            const errorLog = xorEncrypt(`INSERT_ERROR:${logTime}:${error.message.substring(0,20)}`);
-            console.log('[SECURE_LOG]', errorLog);
-            alert('Ошибка: ' + error.message);
-            return;
-        }
-        
-        if (data && data[0]) {
-            addFighterToDOM(data[0]);
-            updateStats();
-            
-            ['personName', 'personPosition', 'personRank', 'personDetails'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-            
-            alert(`Боец ${name} добавлен`);
-        }
-    } catch (error) {
-        const errorLog = xorEncrypt(`CATCH_ERROR:${logTime}:${error.message.substring(0,20)}`);
-        console.log('[SECURE_LOG]', errorLog);
-        alert('Ошибка при добавлении: ' + error.message);
-    }
-}
-
-async function deleteFighter(id) {
-    if (!supabaseClient || !checkSession() || !confirm('Удалить бойца?')) return;
-    
-    const logTime = new Date().toISOString();
-    const logData = xorEncrypt(`DELETE_FIGHTER:${logTime}:${id}`);
-    console.log('[SECURE_LOG]', logData);
-    
-    try {
-        const { error } = await supabaseClient
-            .from('fighters')
-            .delete()
-            .eq('id', id);
-        
-        if (error) {
-            const errorLog = xorEncrypt(`DELETE_ERROR:${logTime}:${error.message.substring(0,20)}`);
-            console.log('[SECURE_LOG]', errorLog);
-            alert('Ошибка удаления: ' + error.message);
-            return;
-        }
-        
-        document.querySelector(`.person-card[data-id="${id}"]`)?.remove();
-        updateStats();
-        alert('Боец удален');
-    } catch (error) {
-        const errorLog = xorEncrypt(`DELETE_CATCH:${logTime}:${error.message.substring(0,20)}`);
-        console.log('[SECURE_LOG]', errorLog);
-        alert('Ошибка при удалении: ' + error.message);
-    }
-}
-
-function updateStats() {
-    const cards = document.querySelectorAll('.person-card');
-    const activeCards = Array.from(cards).filter(card => 
-        card.querySelector('.status').textContent.includes('✅')
-    );
-    
-    const totalEl = document.getElementById('totalCount');
-    const activeEl = document.getElementById('activeCount');
-    const reserveEl = document.getElementById('reserveCount');
-    
-    if (totalEl) totalEl.textContent = cards.length;
-    if (activeEl) activeEl.textContent = activeCards.length;
-    if (reserveEl) reserveEl.textContent = cards.length - activeCards.length;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('copy', (e) => {
-        e.preventDefault();
-        alert('Копирование запрещено!');
-    });
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.keyCode === 123 || 
-            (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
-            (e.ctrlKey && e.shiftKey && e.keyCode === 74) ||
-            (e.ctrlKey && e.keyCode === 85)) {
-            e.preventDefault();
-            return false;
-        }
-    });
-    
-    initSupabase();
-    
-    setInterval(() => {
-        if (!checkSession() && document.getElementById('adminContent')?.style.display === 'block') {
-            localStorage.removeItem('adminSession');
-            localStorage.removeItem('sessionExpiry');
-            window.location.reload();
-        }
-    }, 60000);
-});
     </script>
 </body>
 </html>
